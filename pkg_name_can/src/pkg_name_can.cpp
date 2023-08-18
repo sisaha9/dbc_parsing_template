@@ -31,48 +31,99 @@
 #include <string>
 
 #include "pkg_name_can/pkg_name_can.hpp"
+#include "ros2_socketcan/socket_can_id.hpp"
+#include "can_msgs/msg/frame.hpp"
 
 using std::chrono::duration;
 
 namespace pkg_name_can
 {
 
-static constexpr uint64_t MS_IN_SEC = 1000;
-
 PkgNameCAN::PkgNameCAN(const rclcpp::NodeOptions & options)
 : Node("pkg_name_can_node", options)
 {
 
-    dbc_file_ = declare_parameter<std::string>("dbc_file", "");
+    dbc_file_ = declare_parameter<std::string>("dbc_file");
+    use_bus_time_ = declare_parameter<bool>("use_bus_time");
+    receiver_interval_ns_ = std::chrono::duration_cast<std::chrono::nanoseconds>(declare_parameter<double>("receiver_interval_sec"));
+    sender_timeout_ns_ = std::chrono::duration_cast<std::chrono::nanoseconds>(declare_parameter<double>("sender_timeout_sec"));
+    auto interface = declare_parameter<std::string>("interface");
 
-    pub_can_ = this->create_publisher<Frame>(
-        "can_rx", 20
-    );
+    can_sender_ = std::make_unique<drivers::socketcan::SocketCanSender>(interface_, false);
+    can_receiver_ = std::make_unique<drivers::socketcan::SocketCanReceiver>(interface_, false);
+
+    receiver_thread_ = std::make_unique<std::thread>(&PkgNameCAN::recvCAN, this);
+
+    
     ROS_PUBLISHERS_INITIALIZE
 
     ROS_SUBSCRIBERS_INITIALIZE
-    sub_can_ = this->create_subscription<Frame>(
-        "can_tx", 500,
-        std::bind(&PkgNameCAN::recvCAN, this, std::placeholders::_1)
-    );
 
     dbc_ = NewEagle::DbcBuilder().NewDbc(dbc_file_);
 }
 
 #define RECV_DBC(handler) \
     message = dbc_.GetMessageById(id); \
-    if (msg->dlc >= message->GetDlc()) {message->SetFrame(msg); handler(msg, message);}
+    if (frame_msg->dlc >= message->GetDlc()) {message->SetFrame(frame_msg); handler(frame_msg, message);}
 
-void PkgNameCAN::recvCAN(const Frame::SharedPtr msg)
+void PkgNameCAN::recvCAN()
 {
-    NewEagle::DbcMessage * message = nullptr;
-    if (!msg->is_rtr && !msg->is_error) {
-        auto id = msg->id;
-        switch (id) {
-            SWITCH_CASE_ID
-            default:
-                break;
+    drivers::socketcan::CanId receive_id{};
+    can_msgs::msg::Frame frame_msg(rosidl_runtime_cpp::MessageInitialization::ZERO);
+    while (rclcpp::ok()) {
+        try {
+            receive_id = can_receiver_->receive(frame_msg.data.data(), receiver_interval_ns_);
+        } catch (const std::exception & ex) {
+            RCLCPP_WARN_THROTTLE(
+            this->get_logger(), *this->get_clock(), 1000,
+            "Error receiving CAN message: %s - %s",
+            interface_.c_str(), ex.what());
+            continue;
         }
+        if (use_bus_time_) {
+            frame_msg.header.stamp =
+                rclcpp::Time(static_cast<int64_t>(receive_id.get_bus_time() * 1000U));
+        } else {
+            frame_msg.header.stamp = this->now();
+        }
+        frame_msg.id = receive_id.identifier();
+        frame_msg.is_rtr = (receive_id.frame_type() == drivers::socketcan::FrameType::REMOTE);
+        frame_msg.is_extended = receive_id.is_extended();
+        frame_msg.is_error = (receive_id.frame_type() == drivers::socketcan::FrameType::ERROR);
+        frame_msg.dlc = receive_id.length();
+        NewEagle::DbcMessage * message = nullptr;
+        if (!frame_msg->is_rtr && !frame_msg->is_error) {
+            auto id = frame_msg->id;
+            switch (id) {
+                SWITCH_CASE_ID
+                default:
+                    break;
+            }
+        }
+    }
+}
+
+void PkgNameCAN::onFrame(const can_msgs::msg::Frame::SharedPtr msg)
+{
+    drivers::socketcan::FrameType type;
+    if (msg->is_rtr) {
+        type = drivers::socketcan::FrameType::REMOTE;
+    } else if (msg->is_error) {
+        type = drivers::socketcan::FrameType::ERROR;
+    } else {
+        type = drivers::socketcan::FrameType::DATA;
+    }
+
+    drivers::socketcan::CanId send_id = msg->is_extended ? drivers::socketcan::CanId(msg->id, 0, type, drivers::socketcan::ExtendedFrame) :
+        drivers::socketcan::CanId(msg->id, 0, type, drivers::socketcan::StandardFrame);
+    try {
+        can_sender_->send(msg->data.data(), msg->dlc, send_id, timeout_ns_);
+    } catch (const std::exception & ex) {
+        RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "Error sending CAN message: %s - %s",
+        interface_.c_str(), ex.what());
+        return;
     }
 }
 

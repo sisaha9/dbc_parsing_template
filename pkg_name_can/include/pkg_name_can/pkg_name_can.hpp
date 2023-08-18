@@ -41,9 +41,10 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
+#include "ros2_socketcan/socket_can_receiver.hpp"
+#include "ros2_socketcan/socket_can_sender.hpp"
 
 // ROS messages
-#include "can_msgs/msg/frame.hpp"
 PKG_NAME_MSG_IMPORTS
 
 #include "can_dbc_parser/DbcMessage.hpp"
@@ -74,25 +75,27 @@ private:
  * \param[in] msg The message received over CAN.
  */
     void recvCAN(const Frame::SharedPtr msg);
+    void onFrame(const Frame::SharedPtr msg);
 
     RECV_CAN_MESSAGES
 
     RECV_ROS_MESSAGES
 
-    std::uint8_t vehicle_number_;
-
     // Parameters from launch
     std::string dbc_file_;
-    float max_steer_angle_;
-    bool publish_my_laps_;
+    bool use_bus_time_;
+    std::chrono::nanoseconds receiver_interval_ns_;
+    std::chrono::nanoseconds sender_timeout_ns_;
 
     ROS_SUBSCRIBERS
-    rclcpp::Subscription<Frame>::SharedPtr sub_can_;
 
     ROS_PUBLISHERS
-    rclcpp::Publisher<Frame>::SharedPtr pub_can_;
 
     NewEagle::Dbc dbc_;
+
+    std::unique_ptr<drivers::socketcan::SocketCanSender> can_sender_;
+    std::unique_ptr<drivers::socketcan::SocketCanReceiver> can_receiver_;
+    std::unique_ptr<std::thread> receiver_thread_;
 };
 
 }  // namespace pkg_name_can
