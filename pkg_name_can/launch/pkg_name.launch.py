@@ -34,11 +34,7 @@ def generate_launch_description():
         parameters=[
             pkg_name_param_file,
             {'dbc_file': LaunchConfiguration('dbc_file_path')},
-        ],
-        remappings=[
-            ('can_tx', '/from_can_bus'),
-            ('can_rx', '/to_can_bus'),
-        ],
+        ]
     )
 
     launch_description = [
