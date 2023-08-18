@@ -49,6 +49,7 @@ PkgNameCAN::PkgNameCAN(const rclcpp::NodeOptions & options)
     sender_timeout_ns_ = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>(declare_parameter<double>("sender_timeout_sec")));
     auto interface = declare_parameter<std::string>("interface");
 
+    dbc_ = NewEagle::DbcBuilder().NewDbc(dbc_file_);
     can_sender_ = std::make_unique<drivers::socketcan::SocketCanSender>(interface);
     can_receiver_ = std::make_unique<drivers::socketcan::SocketCanReceiver>(interface);
 
@@ -60,8 +61,6 @@ PkgNameCAN::PkgNameCAN(const rclcpp::NodeOptions & options)
     ROS_PUBLISHERS_INITIALIZE
 
     ROS_SUBSCRIBERS_INITIALIZE
-
-    dbc_ = NewEagle::DbcBuilder().NewDbc(dbc_file_);
 }
 
 #define RECV_DBC(handler) \
