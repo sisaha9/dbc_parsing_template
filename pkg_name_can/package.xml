@@ -16,6 +16,7 @@
   <depend>pkg_name_msgs</depend>
   <depend>can_msgs</depend>
   <depend>can_dbc_parser</depend>
+  <depend>ros2_socketcan</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

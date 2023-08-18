@@ -34,11 +34,9 @@
 #ifndef PKG_NAME_CAN__PKG_NAME_CAN_HPP_
 #define PKG_NAME_CAN__PKG_NAME_CAN_HPP_
 
-#include <cmath>
-#include <array>
 #include <string>
 #include <memory>
-#include <vector>
+#include <chrono>
 
 #include "rclcpp/rclcpp.hpp"
 #include "ros2_socketcan/socket_can_receiver.hpp"
@@ -74,8 +72,8 @@ private:
 /** \brief Convert reports received over CAN into ROS messages.
  * \param[in] msg The message received over CAN.
  */
-    void recvCAN(const Frame::SharedPtr msg);
-    void onFrame(const Frame::SharedPtr msg);
+    void recvCAN();
+    void onFrame(const Frame &msg);
 
     RECV_CAN_MESSAGES
 
@@ -86,6 +84,7 @@ private:
     bool use_bus_time_;
     std::chrono::nanoseconds receiver_interval_ns_;
     std::chrono::nanoseconds sender_timeout_ns_;
+    Frame::SharedPtr send_buffer_;
 
     ROS_SUBSCRIBERS
 
