@@ -1,3 +1,7 @@
 /**:
   ros__parameters:
     use_sim_time: false
+    use_bus_time: true
+    receiver_interval_sec: 0.01
+    sender_timeout_sec: 0.01
+    interface: "can0"
