@@ -53,12 +53,12 @@ PkgNameCAN::PkgNameCAN(const rclcpp::NodeOptions & options)
     can_sender_ = std::make_unique<drivers::socketcan::SocketCanSender>(interface);
     can_receiver_ = std::make_unique<drivers::socketcan::SocketCanReceiver>(interface);
 
-    receiver_thread_ = std::make_unique<std::thread>(&PkgNameCAN::recvCAN, this);
-
     send_buffer_ = std::make_shared<Frame>(rosidl_runtime_cpp::MessageInitialization::ZERO);
 
     
     ROS_PUBLISHERS_INITIALIZE
+
+    receiver_thread_ = std::make_unique<std::thread>(&PkgNameCAN::recvCAN, this);
 
     ROS_SUBSCRIBERS_INITIALIZE
 }
