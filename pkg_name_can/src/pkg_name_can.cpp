@@ -58,9 +58,9 @@ PkgNameCAN::PkgNameCAN(const rclcpp::NodeOptions & options)
     
     ROS_PUBLISHERS_INITIALIZE
 
-    receiver_thread_ = std::make_unique<std::thread>(&PkgNameCAN::recvCAN, this);
-
     ROS_SUBSCRIBERS_INITIALIZE
+
+    receiver_thread_ = std::make_unique<std::thread>(&PkgNameCAN::recvCAN, this);
 }
 
 #define RECV_DBC(handler) \
