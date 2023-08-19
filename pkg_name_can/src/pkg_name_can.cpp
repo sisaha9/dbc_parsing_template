@@ -26,8 +26,6 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include <cmath>
-#include <algorithm>
 #include <string>
 
 #include "pkg_name_can/pkg_name_can.hpp"
@@ -37,13 +35,13 @@ using std::chrono::duration;
 namespace pkg_name_can
 {
 
-static constexpr uint64_t MS_IN_SEC = 1000;
-
 PkgNameCAN::PkgNameCAN(const rclcpp::NodeOptions & options)
 : Node("pkg_name_can_node", options)
 {
 
     dbc_file_ = declare_parameter<std::string>("dbc_file", "");
+
+    dbc_ = NewEagle::DbcBuilder().NewDbc(dbc_file_);
 
     pub_can_ = this->create_publisher<Frame>(
         "can_rx", 20
@@ -55,8 +53,6 @@ PkgNameCAN::PkgNameCAN(const rclcpp::NodeOptions & options)
         "can_tx", 500,
         std::bind(&PkgNameCAN::recvCAN, this, std::placeholders::_1)
     );
-
-    dbc_ = NewEagle::DbcBuilder().NewDbc(dbc_file_);
 }
 
 #define RECV_DBC(handler) \

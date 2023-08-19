@@ -34,11 +34,8 @@
 #ifndef PKG_NAME_CAN__PKG_NAME_CAN_HPP_
 #define PKG_NAME_CAN__PKG_NAME_CAN_HPP_
 
-#include <cmath>
-#include <array>
 #include <string>
 #include <memory>
-#include <vector>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -79,12 +76,8 @@ private:
 
     RECV_ROS_MESSAGES
 
-    std::uint8_t vehicle_number_;
-
     // Parameters from launch
     std::string dbc_file_;
-    float max_steer_angle_;
-    bool publish_my_laps_;
 
     ROS_SUBSCRIBERS
     rclcpp::Subscription<Frame>::SharedPtr sub_can_;
